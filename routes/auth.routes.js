@@ -9,6 +9,8 @@ const User = require('../models/User.model');
 const bcryptjs = require('bcryptjs');
 const saltRounds = 10;
 
+// require auth middleware
+const { isLoggedIn, isLoggedOut } = require('../middleware/route-guard.js');
 
 // GET route ==> to display the signup form to users
 router.get('/signup', (req, res) => res.render('auth/signup'));
@@ -19,6 +21,24 @@ router.post('/signup', (req, res, next) => {
   // console.log("The form data: ", req.body);
  
   const { username, email, password } = req.body;
+
+    // make sure users fill all mandatory fields:
+    if (!username || !email || !password) {
+      res.render("auth/signup", {
+        errorMessage: "All fields are mandatory. Please provide your username, email and password."
+      });
+      return;
+    }
+  
+    // make sure passwords are strong:
+    const regex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}/;
+    if (!regex.test(password)) {
+      res.status(500).render("auth/signup", {
+        errorMessage:
+          "Password needs to have at least 6 chars and must contain at least one number, one lowercase and one uppercase letter."
+      });
+      return;
+    }
  
   bcryptjs
     .genSalt(saltRounds)
@@ -50,12 +70,11 @@ router.post('/signup', (req, res, next) => {
 //////////// L O G I N ///////////
  
 // GET route ==> to display the login form to users
-router.get('/login', (req, res) => res.render('auth/login'));
+router.get("/login", isLoggedOut, (req, res) => res.render("auth/login"));
 
 // POST login route ==> to process form data
-router.post('/login', (req, res, next) => {
-  console.log('SESSION =====> ', req.session);
-  
+router.post("/login", isLoggedOut, (req, res, next) => {
+  console.log("SESSION =====> ", req.session);
   const { email, password } = req.body;
  
   if (email === '' || password === '') {
@@ -83,8 +102,15 @@ router.post('/login', (req, res, next) => {
 
 });
 
-router.get("/userProfile", (req, res) => {
+//                         .: ADDED :.
+router.get("/userProfile", isLoggedIn, (req, res) => {
   res.render("users/user-profile", { userInSession: req.session.currentUser });
+});
+
+//                     .: ADDED :.
+router.post("/logout", isLoggedIn, (req, res) => {
+  req.session.destroy();
+  res.redirect("/");
 });
 
 module.exports = router;
