@@ -44,7 +44,7 @@ router.post('/signup', (req, res, next) => {
 });
 
 
-router.get('/userProfile', (req, res) => res.render('users/user-profile'));
+
 
 
 //////////// L O G I N ///////////
@@ -54,6 +54,8 @@ router.get('/login', (req, res) => res.render('auth/login'));
 
 // POST login route ==> to process form data
 router.post('/login', (req, res, next) => {
+  console.log('SESSION =====> ', req.session);
+  
   const { email, password } = req.body;
  
   if (email === '' || password === '') {
@@ -70,11 +72,19 @@ router.post('/login', (req, res, next) => {
         return;
       } else if (bcryptjs.compareSync(password, user.passwordHash)) {
         res.render('users/user-profile', { user });
+        req.session.currentUser = user;
+        res.redirect('/userProfile');
       } else {
-        res.render('auth/login', { errorMessage: 'Incorrect password.' });
+        return res.render('auth/login', { errorMessage: 'Incorrect password.' });
+       
       }
     })
     .catch(error => next(error));
+
+});
+
+router.get("/userProfile", (req, res) => {
+  res.render("users/user-profile", { userInSession: req.session.currentUser });
 });
 
 module.exports = router;
